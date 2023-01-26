@@ -1,0 +1,358 @@
+##### TAREA N°1 - ECONOMETRÍA DE CORTE TRANSVERSAL Y DATOS DE PANEL #########
+
+# PROFESOR: BUSTAMANTE ROMANÍ, RAFAEL 
+#
+# INTEGRANTES: TORRES ARIAS ANGEL ANTHONY    15120320
+#              HUALLPA FERROA ALEXIS         15120282
+#              VERGARAY CHAVEZ JOSÉ ARTURO   15120321
+#
+# Data extraída de Data and Statistical Services de la Universidad de Princeton.
+
+
+# MODELOS LGOIT:
+# Los modelos lineales nos permiten predecir el valor de una variable a partir del valor de otra u otras. 
+# En su formulación original se desarrollaron para variables dependientes continuas, es decir, 
+# para estimar los valores que toma y para cada valor de x a partir de una ordenada al origen y una o más pendientes.
+# Sin embargo puede ser de interés tomar como variables dependiente a una categórica y eso es lo que hacen los modelos logit, 
+# también conocidos como regresión logística. Claro que no es muy útil predecir cualquier valor de y dadas x1, x2, xn, dado que 
+# categórica solamente puede adquirir dos valores, 0 y 1. Lo que buscaremos predecir son las probabilidades de 0 o 1. 
+# Es decir, dado cierto valor de x ¿cuál es la probabilidad de y0 y de y1? Podríamos simplificarnos la tarea y ajustar sin modificaciones 
+# un modelo lineal con la forma de la ecuación siguiente.
+
+#                   y=β0+β1x+...βix
+
+# Le pediríamos al modelo que predijera 0 o 1, al fin y al los podríamos considerar valores numéricos 
+# e interpretar adecuadamente. Sin embargo estaríamos violando los supuestos de un modelo lineal: 
+# la distribución de probabilidad de y categórica no es normal. Sin embargo no todo está perdido. 
+# Si y no se ajusta a una distribución normal se puede ajustar a otras distribuciones y, para "y" dicotómica, 
+# podemos asumir que se ajusta a una distribución binomial. 
+
+# EMPEZAREMOS CARGANDO LA BASE DE DATOS A DESARROLLAR:
+
+library(haven)
+datalog <- read_dta("C:/Users/PC/Downloads/logit_example.dta")
+View(logit_example)
+
+# SEGUDIO INSTALAREMOS LOS PAQUETES NECESARIOS PARA EL DESARROLLO:
+
+    install.packages("wooldridge")
+    install.packages("stargazer")
+    install.packages("pscl")
+    install.packages("mfx")
+    install.packages("betareg")
+    install.packages("car")
+    install.packages("dplyr")
+    
+    library(wooldridge)
+    library(stargazer)
+    library(pscl)
+    library(mfx)
+    library(betareg)
+    library(car)
+    library(dplyr)
+    
+    
+# 1. estmimación del modelo Logit - aplicación
+    
+    
+    logit <- glm(y_bin ~ x1 + x2 + x3, family=binomial(link="logit"), data=datalog)
+    summary(logit)
+    
+# La columna Pr> z muestra los p valores de dos colas que prueban:
+    
+#       Ho: β = 0 (sin efecto significativo)
+#       H1: β ≠ 0.(los betas poseen significancia)
+    
+# El valor habitual es 0,05; según esta medida, ninguno de los coeficientes tiene 
+# un efecto significativo sobre el log-odds ratio de la variable dependiente. 
+# El coeficiente para x3 es significativo al 10% (<0,10).
+    
+# El z value también prueba la nulidad de que el coeficiente es igual a cero. 
+# Para una significación del 5%, el valor z debe quedar fuera de ± 1,96.
+  
+# La columna de los betas muestra los coeficientes en forma de log-odds. 
+# Cuando x1 aumenta en una unidad, el cambio esperado es de 0,8618.
+    
+    
+# 1.1 Efectos positivos o negativos de los betas
+# Lo que obtiene de esta columna es, si el efecto de los predictores es positivo o negativo.
+# más adelante profundizaremos en este comando al tratar los ratios ODDS.
+    
+    library(stargazer)
+    stargazer(logit, type="text", out="logit.htm")
+    
+    
+# 2.Ratios odds:
+# Estimando los ratios odds ratio:
+    
+#  2.1 primera forma:
+    
+    cbind(Estimate=round(coef(logit),4), OR=round(exp(coef(logit)),4))
+    
+# 2.2 segunda forma usando "mfx"
+    
+    library(mfx)
+    logitor(y_bin ~ x1 + x2 + x3, data=datalog)
+    logitor(formula = y_bin ~ x1 + x2 + x3, data = datalog)
+        
+# Interpretación de los ratios ODDS: según el resultado a continuación, 
+# cuando x3 aumenta en una unidad, las probabilidades de y = 1 aumentan en un (2.12-1)*100= 112%.
+# O de otra manera podemos afirmar que las probabilidades de que y = 1 son 2,12 veces más altas cuando x3 
+# aumenta en una unidad (manteniendo constantes todos los demás predictores). 
+# Para obtener los ratios ODDS, necesitamos el exponenciar el coeficiente logit.
+  
+
+#  2.3 Exponenciando x3 para mostrar las probabilidades de pronóstico:
+    
+# La columna estimate muestra los coeficientes en forma de odds-ratio. Cuando x3 aumenta en una unidad,
+# el cambio esperado es el 0,7512 de probabilidad. Si mantenemos x1 y x2 constantes en sus 
+# medias, y variamos x3 con los valores en 1,2 y 3, podemos obtener las probabilidades pronosticadas 
+# de cada uno de los tres valores de x3:
+
+    r1 <- logit$coeff[1] + logit$coeff[2]*mean(datalog$x1) + logit$coeff[3]*mean(datalog$x2) + logit$coeff[4]*1
+    
+    r2 <- logit$coeff[1] + logit$coeff[2]*mean(datalog$x1) + logit$coeff[3]*mean(datalog$x2) + logit$coeff[4]*2
+    
+    r3 <- logit$coeff[1] + logit$coeff[2]*mean(datalog$x1) + logit$coeff[3]*mean(datalog$x2) + logit$coeff[4]*3
+    
+    summary (r1)
+    summary (r2)
+    summary (r3)
+    
+    
+# 2.3.1 Cuando x3 aumenta de 1 a 2, las probabilidades aumentan:
+    
+    
+      r2-r1
+      0,7512115
+      
+      
+# 2.3.2 Cuando x3 aumenta de 2 a 3, las probabilidades aumentan:
+      
+      
+    r3-r2
+    0,7512115
+    
+    
+# Lo que corresponde a la estimación de x3 anterior.
+    
+# 2.3.3 Los ratios ODDS, es la exponenciación de la diferencia de las probabilidades.
+    
+    
+    exp (r2-r1)
+    2.119566
+    
+    
+# 2.3.4 O, la razón de la exponenciación de cada una de las probabilidades.
+    
+    
+    exp (r2) / exp (r1)
+    2.119566
+    
+    
+#   Lo que corresponde al valor ODDS RatioA para x3 anterior.   
+    
+    
+    
+# 2.4 Ratios ODDS interpretación relativa de las predictoras
+    
+#    Los ratios de riesgo relativo permiten una interpretación más sencilla de los coeficientes logit. 
+#    Son el valor exponencial de los coeficientes logit.
+    
+    
+      logit.or = exp(coef(logit))
+      library(stargazer)
+      stargazer(logit, type="text", coef=list(logit.or), p.auto=FALSE, out="logitor.htm")
+    
+    
+#    Manteniendo todas las demás variables constantes, cuando x1 aumenta una unidad, es 2,367 veces más probable 
+#    que esté en la categoría 1. En otras palabras, las probabilidades de estar en la categoría 1 
+#    (a diferencia de la categoría 0) son un 136% más altas cuando x1 mueve una unidad (2,36 - 1). 
+#    Sin embargo, el coeficiente no es significativo.    
+    
+# 3. Logit model: predicción de probabilidades.
+#  podemos escribirlo de la siguiente manera (Gelman and Hill, 2007):
+#      Pr(yi = 1) = Logit-1(Xiβ)
+
+      
+      logit <- glm(y_bin ~ x1 + x2 + x3, family=binomial(link="logit"), data=datalog)
+      coef(logit)
+
+# 3.1 la ecuación a modelar sería la siguiente:
+
+#  Pr(yi = 1) = Logit^-1(0.4261935 + 0.8617722*x1 + 0.3665348*x2 + 0.7512115*x3 )
+      
+# La estimación de la probabilidad en el punto medio de cada predictor se puede realizar 
+# invirtiendo el modelo logit. Gelman y Hill proporcionan una función para esto , que está 
+# disponible en el paquete R "arm"    
+
+# 3.2 predicción: 
+      
+      
+      install.packages("arm")
+      library(arm)
+      
+      invlogit = function (x) {1/(1+exp(-x))} 
+      invlogit(coef(logit)[1]+ coef(logit)[2]*mean(datalog$x1)+coef(logit)[3]*mean(datalog$x2)+coef(logit)[4]*mean(datalog$x3))
+      
+      
+# existe un 84% de probabilidad que la variable Y sea igual a 1. aplícase para cualquier caso de estudio.    
+      
+      
+# 3.3 Modelo logit - variable categórica: 
+# Probabilidades predichas Añadiendo variable categórica, el modelo sería:
+      
+      logit.cat <- glm(y_bin ~ x1 + x2 + x3 + opinion,family=binomial(link="logit"), data=datalog)
+      summary(logit.cat)
+      coef(logit.cat)
+      
+      
+#   3.3.1 estimando la probabilidad cuando la opinión es = "Agree"     
+      
+      invlogit = function (x) {1/(1+exp(-x))}
+      invlogit(coef(logit.cat)[1]+
+                 coef(logit.cat)[2]*mean(datalog$x1)+
+                 coef(logit.cat)[3]*mean(datalog$x2)+
+                 coef(logit.cat)[4]*mean(datalog$x3)+
+                 coef(logit.cat)[5]*1)
+#    Pr(yi = 1| opinion= “Agree”) = 0.5107928 
+      
+
+      
+#   3.3.2 estimando la probabilidad cuando la opinión es = ‘Strongly disagree’     
+            invlogit = function (x) {1/(1+exp(-x))}
+            invlogit(coef(logit.cat)[1]+
+                 coef(logit.cat)[2]*mean(datalog$x1)+
+                 coef(logit.cat)[3]*mean(datalog$x2)+
+                 coef(logit.cat)[4]*mean(datalog$x3)+
+                 coef(logit.cat)[6]*1)
+#      Pr(yi = 1| opinion= “Disagree”) = 0.9077609
+      
+ 
+
+# 3.3.3 estimando la probabilidad cuando la opinión es = ‘Disagree’     
+            invlogit = function (x) {1/(1+exp(-x))}
+            invlogit(coef(logit.cat)[1]+
+                 coef(logit.cat)[2]*mean(datalog$x1)+
+                 coef(logit.cat)[3]*mean(datalog$x2)+
+                 coef(logit.cat)[4]*mean(datalog$x3)+
+                 coef(logit.cat)[7]*1)
+#     Pr(yi = 1| opinion= “Strongly disagree”) = 0.933931
+      
+      
+# 3.3.4 estimando la probabilidad cuando la opinión es = ‘Strongly agree’      
+            invlogit = function (x) {1/(1+exp(-x))}
+            invlogit(coef(logit.cat)[1]+
+                 coef(logit.cat)[2]*mean(datalog$x1)+
+                 coef(logit.cat)[3]*mean(datalog$x2)+
+                 coef(logit.cat)[4]*mean(datalog$x3))
+#     Pr(yi = 1| opinion= “Strongly agree”) = 0.8764826
+      
+      
+# 3.4    Modelo logit: predicción de probabilidades
+      
+#     Otra forma de estimar las probabilidades es estableciendo condiciones iniciales.
+#     Obtener probabilidades pronosticadas que mantienen todos los predictores o variables independientes
+#     en sus medias.      
+
+# 3.4.2 Predicción sin intervalo de confianza ni error estandar
+            
+            allmean <- data.frame(x1=mean(datalog$x1),
+            x2=mean(datalog$x2),
+            x3=mean(datalog$x3))
+           allmean 
+                  x1       x2        x3
+#           1 0.6480006 0.1338694 0.761851
+           
+           allmean$pred.prob <- predict(logit, newdata=allmean, type="response")
+           allmean
+           
+#                  x1        x2       x3   opinion  pred.prob
+#           1 0.6480006 0.1338694 0.761851    3    0.8646400
+#           2 0.6480006 0.1338694 0.761851    1    0.7633112
+#           3 0.6480006 0.1338694 0.761851    2    0.8194532
+#           4 0.6480006 0.1338694 0.761851    4    0.8998990
+           
+# Cuando todos los valores predictores se mantienen en sus medias, la probabilidad de y = 1 es del 83%.
+# Después de estimar el modelo logit y crear el conjunto de datos con los valores medios de los predictores,
+# puede usar la función predict () para estimar las probabilidades predichas y agregarlas al conjunto de datos "allmean".            
+            
+ 
+           
+           
+           
+# 3.4.3  Predicción sin intervalo de confianza
+# creamos un nuevo conjunto de datos con los valores medios de los predictores para cada categoría:                      
+                 
+            logit <- glm(y_bin ~ x1+x2+x3+opinion, family=binomial(link="logit"), data=datalog) 
+            summary(logit)
+            
+ 
+            
+            allmean <- data.frame(x1=rep(mean(datalog$x1),4),
+                                  x2=rep(mean(datalog$x2),4),
+                                  x3=rep(mean(datalog$x3),4),
+                                  opinion=as.factor(c("Str agree","Agree","Disag","Str disag")))
+            library(car)
+            allmean$opinion <- as.numeric(allmean$opinion)
+            str(allmean$opinion)
+      
+            allmean <- cbind(allmean,predict(logit, newdata=allmean, type="response", se.fit=TRUE))
+            summary(allmean)      
+            allmean
+            
+#                x1        x2       x3    opinion pred.prob    fit     se.fit       residual.scale
+#           1 0.6480006 0.1338694 0.761851       3 0.8646400 0.8646400 0.05370602              1
+#           2 0.6480006 0.1338694 0.761851       1 0.7633112 0.7633112 0.09107420              1
+#           3 0.6480006 0.1338694 0.761851       2 0.8194532 0.8194532 0.05634332              1
+#           4 0.6480006 0.1338694 0.761851       4 0.8998990 0.8998990 0.06047728              1
+            
+            
+            
+# 3.4.4  Predicción con intervalo de confianza
+            
+            
+# Renaming "fit" and "se.fit" columns
+            
+            names(allmean)[names(allmean)=="fit"] = "prob"
+            names(allmean)[names(allmean)=="se.fit"] = "se.prob"
+            
+# Estimating confidence intervals
+            
+            allmean$ll = allmean$prob - 1.96*allmean$se.prob
+            allmean$ul = allmean$prob + 1.96*allmean$se.prob
+            allmean
+            
+#                 x1        x2       x3     opinion pred.prob   prob    se.prob    residual.scale   ll        ul
+#           1 0.6480006 0.1338694 0.761851       3 0.8646400 0.8646400 0.05370602              1 0.7593762 0.9699038
+#           2 0.6480006 0.1338694 0.761851       1 0.7633112 0.7633112 0.09107420              1 0.5848058 0.9418166
+#           3 0.6480006 0.1338694 0.761851       2 0.8194532 0.8194532 0.05634332              1 0.7090203 0.9298861
+#           4 0.6480006 0.1338694 0.761851       4 0.8998990 0.8998990 0.06047728              1 0.7813636 1.0184345
+            
+# 4. Graficos de las probabilidades pronosticadas e intervalos de confianza usando ggplot2:
+            
+            library(ggplot2)
+            ggplot(allmean, aes(x=opinion, y = prob)) +
+              geom_errorbar(aes(ymin = ll, ymax = ul), width = 0.2, lty=1, lwd=1, col="red") +
+              geom_point(shape=18, size=5, fill="black") +
+              scale_x_discrete(limits = c("Str agree","Agree","Disag","Str disag")) +
+              labs(title= " Predicted probabilities", x="Opinion", y="Pr(y=1)", caption = "add footnote here") +
+              theme(plot.title = element_text(family = "sans", face="bold", size=13, hjust=0.5),
+                    axis.title = element_text(family = "sans", size=9),
+                    plot.caption = element_text(family = "sans", size=5))
+      
+      
+# 5. Logit model: efectos marginales.
+            
+            
+            install.packages("mfx") 
+            library(zoo)
+            logitmfx(y_bin ~ x1+x2+x3, data=datalog)
+            logitmfx(formula = y_bin ~ x1 + x2 + x3, data = datalog)   
+      
+# Los efectos marginales muestran el cambio en la probabilidad cuando el predictor o variable independiente
+# aumenta en una unidad. Para las variables continuas, esto representa el cambio instantáneo dado que la "unidad" 
+# puede ser muy pequeña. Para las variables binarias, el cambio es de 0 a 1, por lo que una "unidad", 
+# como se suele pensar.
+            
+            
